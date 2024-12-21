@@ -1,0 +1,168 @@
+##to create a merge request and 
+git push \               
+-o merge_request.create -o merge_request.title="$(git branch --show-current)" \
+-o merge_request.target=<CHANGE IT TO THE BRANCH YOU CHECKED OUT FROM> \
+-o merge_request.label="<ANY LABEL>" \
+origin $(git branch --show-current)
+
+
+git push -o merge_request.create -o merge_request.title="$(git branch --show-current)" -o merge_request.target=main origin $(git branch --show-current) -o merge_request.assignee="@rtamra" -o merge_request.reviewer="@nmayerhofer"
+
+
+
+oc project epa-dev04; oc get pods | grep galera-cluster| cut -d " " -f1
+Now using project "epa-dev04" on server "https://api.epa.gemtest.rise-link.at:6443".
+galera-cluster-79tnw
+galera-cluster-bx7qv
+galera-cluster-zbbgd
+# pick one
+cluster_name="galera-cluster-79tnw"
+
+
+oc cp ~/Downloads/epa-stat-service-EPA-44160.sh $cluster_name:/tmp/; oc exec $cluster_name -- /tmp/epa-stat-service-EPA-44160.sh
+Defaulting container name to galera.
+
+
+scp ~/Downloads/vau-setup-stick_v-23.4.0-1-virtio_dev-debug-nosigcheck.img.gz jbis@epa-kvmhost05-test-ar21.mgmt.ar21.riseops.at:/
+
+download the stick keys and put it on http://
+
+
+open the machines using ssh <hostname which is writen after | > CX command
+
+
+kvm
+-- put the stick there in your own /home/rz01/rtamra
+run: XAUTHORITY=$HOME/.Xauthority sudo virt-manager
+
+then open the vms (you already have the VMs list) by DOUBLE CLICKING
+
+gunzip to extract the gz sticks
+
+./virsh-set-boot-image.sh <host short form - vau22> /home/rz01/rtamra/vau-setup-stick_v-<version>-virtio_dev-debug-nosigcheck.img
+
+extract the vm window
+
+for non virtual machines:
+	hardware details > scsci disk 2 > remove
+	PLAY button
+	
+all hosts have 100 size otherwise 28
+
+all vau have "auto" 
+all kmshost have "epa-develop"
+	exception: kmsvau0x need --> epa-develop | size 28
+all vau-host have ""  
+
+In case you miss 15 sec window ... login to the machine
+	## change instanz auto/epa-develop or vice versa
+	-> mount -o remount,rw /mnt/config
+	-> then vi /mnt/config/dev-configs/instanz
+	-> delete "auto"
+	-> write "epa-develop"
+	-> save
+	-> reboot
+	
+for idrac machines:
+	Once boot is done:
+	in idrac menu
+	virtual media > discoonect
+	then power > normal boot
+
+	
+both:
+	when booted... rise rise 
+	sudo su
+	watch podman ps
+   if no pods afetr 10 min also
+	login to vau machine and run systemctl status epa-vau-rng.service | grep "failed to get seed" --> means in intsanz file there is wrong epa-develop or auto in "kMS MS not KVM machine"
+	
+	vauhost have 20 pods
+	vau have 5-6 pods
+	
+	
+
+MR to be done NOW!
+
+Argo cd ---> sync for that namespace
+
+go to openshift > worload> sellect namespace in project and see everything is good(running) or not....
+Once satisfied with above
+start the smoketest (epa-test-automation pipeline "monitoring" branch) if not there run pipeline "Run pipeline" develop_copy > give the namespace then ONLY run the smoke:full:default:dev (will take 11 min approx)
+
+
+
+
+
+
+Sealed secrets:
+	cat <filename> | kubeseal --raw --scope=namespace-wide --namespace=<name-space-name> --from-file=/dev/stdin --cert=/home/mrsieb/REPOS/RISE/kubernetes-epa-tools/bitnami-seal/sealing_pub_keys/sealing_intc1.crt.pem > <filename>.sealed 
+	My sntax: 	cat /tmp/epa-argocd-applications/epa-applications/config/int-ingress-proxy/rise/ssl/emma-dev.tiltu-client.key.pem | kubeseal --raw --scope=namespace-wide --namespace=epa-as-intc1-bmt1  --from-file=/dev/stdin --cert=/home/rohit/gitlab_projects/kubernetes-epa-tools/bitnami-seal/sealing_pub_keys/sealing_intc1.crt.pem /tmp/emma-dev.tiltu-client.crt.pem.sealed
+	
+	
+	
+
+Flyway ERROR:
+	if db is NOT new
+	oc rsh galera-cluster-asdhjadj
+	mysql -uroot -ptest
+	drop databases of the services which are not running
+	In case galera not coming up:
+	clone it https://repo.risedev.at/epa/devops/galera-recovery/-/tree/feature/disable-security-context?ref_type=heads
+	move to branch feature/disable-security-context
+	run 'python -m galrec status'   standing inside the repo
+	and then run 'python -m galrec offline'
+	This will make the trick to make galera cluster initalize (may take upto 15 min)
+	if there is no data on the NS you can just delete the pvc that fixed it
+
+Circum venting the REBASE ISSUES
+ 6446  git checkout version/develop # final place
+ 6447  git pull
+ 6448  git checkout -b EPA-62033--simulator-stable ## new one
+ 6449  git merge TIRELEASES-1841 # the merge request where you were getting the issue
+ 6450  git add .
+ 6451  git commit -m "EPA-62033" 
+ 6452  git push
+ 6453  \n    git push --set-upstream origin EPA-62033--simulator-stable\n
+ 
+ 
+ 
+Pre-commit command--> 
+	docker run --rm -v$(pwd):/pwd --workdir=/pwd docker-gemkon.a9y.risedev.at/build/epa-gitlab-precommit:latest /home/runner/.local/bin/pre-commit run --all-files --config /home/runner/precommit/pre-commit-config.yaml
+ 
+ 
+A new stick on a particular vau-->
+	go in the vau-install-helper repo
+	then change the stick version
+	redeploy others to present state
+	then go to awx site click the deploy
+	
+Vau- download image for idrac. need these below:
+	confpage: https://confluence.risedev.at/display/EPA/DevOps+-+VAU+vrz0506+installation
+	git: https://repo.risedev.at/ocp/vrz0506/devc1/vau-image-server
+	argocd: https://argocd-infrastructure.apps.intc1.ocp.riseops.de/applications?showFavorites=false&proj=&sync=&autoSync=&health=&namespace=&cluster=&labels=&appNamespace=infrastructure-argocd-infrastructure
+	os: https://console-openshift-console.apps.devc1.ocp.riseops.de/k8s/ns/vau-image-server/pods/
+	
+	
+vau remote update:	
+	curl -vk https://appliance-update-server.apps.int.epa.rise-link.de/getAvailableUpdates
+
+	## Get MachineName via SSH
+	cat /sys/devices/virtual/dmi/id/product_serial 
+
+	## Check Update-Service 
+	systemctl status rise-remote-update
+
+	## Check Update-Timer
+	systemctl status rise-remote-update.timer
+
+	## Check URL of Upload-Server
+	cat /etc/rise-appliance/rise-remote-update
+ 
+ 
+ 
+ 
+ Gateway --> route --> svc --> pod (istio)
+ 
+ 
+ 
